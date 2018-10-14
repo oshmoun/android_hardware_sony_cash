@@ -1,6 +1,8 @@
 /*
- * CASH! Camera Augmented Sensing Helper
- * a multi-sensor camera helper server
+ * Micro Communicator for Projection uC
+ * a High-Speed Serial communications server
+ *
+ * Input devices module
  *
  * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
@@ -17,20 +19,28 @@
  * limitations under the License.
  */
 
-#ifndef CASHSVR_EXT_H
-#define CASHSVR_EXT_H
+#define ITERATE_MAX_DEVS	9
 
-struct exp_iso_tpl {
-	int64_t exp;
-	int32_t iso;
+enum {
+	THREAD_TOF,
+	THREAD_RGBC,
+	THREAD_MAX
 };
 
-int cash_tof_start(int value);
-int cash_is_tof_in_range(void);
-int32_t cash_get_focus(void);
 
-int cash_rgbc_start(int value);
-int cash_is_rgbc_in_range(void);
-struct exp_iso_tpl cash_get_exp_iso_tpl(void);
+enum {
+	FD_TOF,
+	FD_RGBC,
+	FD_MAX
+};
 
-#endif
+static bool ucithread_run[THREAD_MAX];
+static pthread_t uci_pthreads[THREAD_MAX];
+static struct pollfd uci_pfds[FD_MAX];
+static struct epoll_event uci_pollevt[FD_MAX];
+static int uci_pollfd[FD_MAX];
+static int uci_pfdelay_ms[FD_MAX];
+
+static const char sysfs_input_str[] = "/sys/class/input/input";
+static const char devfs_input_str[] = "/dev/input/event";
+

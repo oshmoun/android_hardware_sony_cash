@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG			"CASH_INPUT"
+#define LOG_TAG			"CASH_TOF_INPUT"
 
 #include <sys/poll.h>
 #include <sys/epoll.h>
@@ -43,36 +43,16 @@
 #include <log/log.h>
 
 #include "cash_private.h"
-#include "cash_input.h"
+#include "cash_input_common.h"
+#include "cash_input_tof.h"
 #include "cash_ext.h"
 
-#define VL53L0_EVT		"/dev/input/event1"
 #define VL53L0_STR		"STM VL53L0 proximity sensor"
 #define VL53L0_HIGH_RANGE	"1"
 #define VL53L0_HIGH_ACCURACY	"2"
 
-#define ITERATE_MAX_DEVS	9
-
-#define SYSFS_INPUT_STR		"/sys/class/input/input%d"
-#define DEVFS_INPUT_STR		"/dev/input/event%d"
-
-static const char sysfs_input_str[] = "/sys/class/input/input";
-static const char devfs_input_str[] = "/dev/input/event";
 static int stmvl_fd;
 
-
-
-enum {
-	FD_TOF,
-	FD_MAX
-};
-
-static bool ucithread_run[THREAD_MAX];
-static pthread_t uci_pthreads[THREAD_MAX];
-static struct pollfd uci_pfds[FD_MAX];
-static struct epoll_event uci_pollevt[FD_MAX];
-static int uci_pollfd[FD_MAX];
-static int uci_pfdelay_ms[FD_MAX];
 static char *uci_tof_enable_path;
 static bool tof_enabled = false;
 

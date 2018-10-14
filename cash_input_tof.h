@@ -33,11 +33,6 @@ struct cash_vl53l0 {
 	int measure_mode;
 };
 
-enum {
-	THREAD_TOF,
-	THREAD_MAX
-};
-
 int cash_input_tof_read(struct cash_vl53l0 *stmvl_cur,
 	uint16_t want_code);
 int cash_tof_read_stabilized(

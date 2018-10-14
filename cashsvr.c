@@ -39,7 +39,8 @@
 
 #include <libpolyreg/polyreg.h>
 #include "cash_private.h"
-#include "cash_input.h"
+#include "cash_input_tof.h"
+#include "cash_input_rgbc.h"
 #include "cash_ext.h"
 
 #define UNUSED __attribute__((unused))
