@@ -34,13 +34,16 @@ enum {
 	FD_MAX
 };
 
-static bool ucithread_run[THREAD_MAX];
-static pthread_t uci_pthreads[THREAD_MAX];
-static struct pollfd uci_pfds[FD_MAX];
-static struct epoll_event uci_pollevt[FD_MAX];
-static int uci_pollfd[FD_MAX];
-static int uci_pfdelay_ms[FD_MAX];
+bool ucithread_run[THREAD_MAX];
+pthread_t uci_pthreads[THREAD_MAX];
+struct pollfd uci_pfds[FD_MAX];
+struct epoll_event uci_pollevt[FD_MAX];
+int uci_pollfd[FD_MAX];
+int uci_pfdelay_ms[FD_MAX];
 
 static const char sysfs_input_str[] = "/sys/class/input/input";
 static const char devfs_input_str[] = "/dev/input/event";
+
+int cash_input_threadman(bool start, int threadno, void *(thread_func)(void *));
+int cash_set_parameter(char* path, char* value, int value_len);
 

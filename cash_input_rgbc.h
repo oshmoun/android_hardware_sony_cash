@@ -33,17 +33,8 @@ struct cash_tcs3490 {
 	int clear;
 };
 
-int cash_input_rgbc_read(struct cash_tcs3490 *tcsvl_cur,
-	uint16_t want_code);
-int cash_rgbc_read_stabilized(
-	struct cash_tcs3490 *tcsvl_final,
-	int runs, int nmatch, int sleep_ms, int hyst);
 int cash_rgbc_read_inst(struct cash_tcs3490 *tcsvl_final);
-int cash_rgbc_thr_read_stabilized(
-	struct cash_tcs3490 *tcsvl_final,
-	int runs, int nmatch, int sleep_ms, int hyst);
 int cash_input_rgbc_start(bool start);
-int cash_input_threadman(bool start, int threadno);
 bool cash_input_is_rgbc_alive(void);
 int cash_input_rgbc_init(void);
 

@@ -169,12 +169,6 @@ static int cash_tof_sys_init(bool high_accuracy, int devno, int plen)
 		close(fd);
 	}
 
-	/* We're done setting permissions now, let's move back to system context */
-	if (setuid(uid) == -1) {
-		ALOGD("Failed to change uid");
-		return 1;
-	}
-
 	return 0;
 }
 
@@ -536,7 +530,7 @@ static void *cash_input_tof_thread(void *unusedvar UNUSED)
 
 	cash_tof_enable(true);
 
-	ALOGD("ToF Thread started");
+	ALOGD("ToF Thread started %d %d", ucithread_run[THREAD_TOF], ucithread_run[THREAD_RGBC]);
 
 	while (ucithread_run[THREAD_TOF]) {
 		ret = epoll_wait(uci_pollfd[FD_TOF], pevt,
@@ -558,33 +552,9 @@ static void *cash_input_tof_thread(void *unusedvar UNUSED)
 	pthread_exit((void*)((int)0));
 }
 
-/* Start/stop threads */
-int cash_input_threadman(bool start, int threadno)
-{
-	int ret = -1;
-
-	if (start == false) {
-		ucithread_run[threadno] = false;
-		return 0;
-	};
-
-	ucithread_run[threadno] = true;
-
-	if (threadno == THREAD_TOF) {
-		ret = pthread_create(&uci_pthreads[threadno], NULL,
-				cash_input_tof_thread, NULL);
-		if (ret != 0) {
-			ALOGE("Cannot create ToF thread.");
-			return -ENXIO;
-		}
-	}
-
-	return ret;
-}
-
 int cash_input_tof_start(bool start)
 {
-	return cash_input_threadman(start, THREAD_TOF);
+	return cash_input_threadman(start, THREAD_TOF, cash_input_tof_thread);
 }
 
 bool cash_input_is_tof_alive(void)

@@ -33,6 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <pwd.h>
 
 #include <cutils/android_filesystem_config.h>
 #include <log/log.h>
@@ -63,6 +64,7 @@ static bool ucthread_run = true;
 
 static int cashsvr_tof_start(int ena)
 {
+	cash_input_rgbc_start(ena);
 	return cash_input_tof_start(ena);
 }
 
@@ -355,6 +357,7 @@ int cashsvr_configure(void)
 	if (rc < 0) {
 		ALOGE("Cannot parse configuration for ToF assisted AF");
 	} else {
+		cash_input_rgbc_init();
 		rc = cash_input_tof_init();
 		if (rc < 0)
 			ALOGW("Cannot open ToF. Ranging will be unavailable");
@@ -384,12 +387,21 @@ int cashsvr_configure(void)
 int main(void)
 {
 	int rc;
+	struct passwd *pwd;
 
 	ALOGI("Initializing Camera Augmented Sensing Helper Server...");
 
 	rc = cashsvr_configure();
 	if (rc != 0)
 		ALOGW("Configuration went wrong. You will experience issues.");
+
+	/* We're done setting permissions now, let's move back to system context */
+	pwd = getpwnam("system");
+	if (pwd == NULL)
+		ALOGW("failed to get uid for system");
+	else if (setuid(pwd->pw_uid) == -1)
+		ALOGW("Failed to change uid");
+
 start:
 	/* All devices opened and configured. Start! */
 	rc = manage_cashsvr(true);
