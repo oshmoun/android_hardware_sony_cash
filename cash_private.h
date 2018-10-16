@@ -74,7 +74,7 @@ struct cash_params {
 };
 
 struct cash_response {
-	bool success;
+	bool retval;
 	int32_t focus_step;
 	int64_t exptime;
 	int32_t iso;

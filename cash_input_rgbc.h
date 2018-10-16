@@ -3,6 +3,9 @@
  * a multi-sensor camera helper server
  *
  * Input devices module
+ * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * RGBC-IR module
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +25,7 @@ struct cash_tcs3490 {
 	int green;
 	int blue;
 	int clear;
+	int ir;
 };
 
 int cash_rgbc_read_inst(struct cash_tcs3490 *tcsvl_final);

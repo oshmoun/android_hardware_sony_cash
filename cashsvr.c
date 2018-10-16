@@ -223,7 +223,7 @@ static int32_t cash_dispatch(struct cash_params *params, struct cash_response *c
 		rc = -2;
 	}
 
-	cash_resp->success = rc >= 0;
+	cash_resp->retval = rc;
 	return rc;
 }
 

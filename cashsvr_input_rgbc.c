@@ -2,6 +2,8 @@
  * CASH! Camera Augmented Sensing Helper
  * a multi-sensor camera helper server
  *
+ * RGBC-IR module
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -291,11 +293,32 @@ int cash_input_rgbc_thr_read(struct cash_tcs3490 *tcsvl_cur,
 					tcsvl_cur->clear = value;
 				}
 				break;
+			case ABS_HAT0X:
+				if (value >= 0) {
+					tcsvl_cur->red = value;
+				}
+				break;
+			case ABS_HAT0Y:
+				if (value >= 0) {
+					tcsvl_cur->green = value;
+				}
+				break;
+			case ABS_HAT1X:
+				if (value >= 0) {
+					tcsvl_cur->blue = value;
+				}
+				break;
+			case ABS_HAT1Y:
+				if (value >= 0) {
+					tcsvl_cur->ir = value;
+				}
+				break;
 			default:
 				break;
 		}
 	}
 
+	ALOGE("RGBC VALUES R:%d G:%d B:%d C:%d IR:%d", tcsvl_cur->red, tcsvl_cur->green, tcsvl_cur->blue, tcsvl_cur->clear, tcsvl_cur->ir);
 	return 0;
 }
 

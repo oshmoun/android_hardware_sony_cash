@@ -122,7 +122,7 @@ int cash_tof_start(int value)
 	struct cash_response cash_resp;
 	rc = cashsvr_send_set(OP_TOF_START, value, &cash_resp);
 	if(rc > 0) {
-		return cash_resp.success;
+		return cash_resp.retval;
 	}
 	return rc;
 }
@@ -133,7 +133,7 @@ int cash_is_tof_in_range(void)
 	struct cash_response cash_resp;
 	rc = cashsvr_send_set(OP_CHECK_TOF_RANGE, 0, &cash_resp);
 	if(rc > 0) {
-		return cash_resp.success;
+		return cash_resp.retval;
 	}
 	return rc;
 }
@@ -155,7 +155,7 @@ int cash_rgbc_start(int value)
 	struct cash_response cash_resp;
 	rc = cashsvr_send_set(OP_RGBC_START, value, &cash_resp);
 	if(rc > 0)
-		return cash_resp.success;
+		return cash_resp.retval;
 	return rc;
 }
 
@@ -165,7 +165,7 @@ int cash_is_rgbc_in_range(void)
 	struct cash_response cash_resp;
 	rc = cashsvr_send_set(OP_CHECK_RGBC_RANGE, 0, &cash_resp);
 	if(rc > 0)
-		return cash_resp.success;
+		return cash_resp.retval;
 	return rc;
 }
 
