@@ -31,15 +31,11 @@ typedef enum {
 	OP_TOF_START,
 	OP_CHECK_TOF_RANGE,
 	OP_FOCUS_GET,
+	OP_RGBC_START,
+	OP_CHECK_RGBC_RANGE,
+	OP_EXPTIME_ISO_GET,
 	OP_MAX,
 } cash_svr_ops_t;
-
-struct cash_cached_data {
-	bool light_suspended;
-	uint8_t light;
-	uint8_t focus;
-	uint8_t keystone;
-};
 
 struct cash_foctbl_entry {
 	int32_t input_val;
@@ -61,6 +57,9 @@ struct cash_configuration {
 	int32_t polyreg_extra;
 	int8_t  use_tof_stabilized;
 	int8_t  disable_tof;
+	int32_t rgbc_clear_min;
+	int32_t rgbc_clear_max;
+	int8_t  disable_rgbc;
 };
 
 struct cash_focus_state {
@@ -72,6 +71,13 @@ struct cash_focus_state {
 struct cash_params {
 	int32_t operation;
 	int32_t value;
+};
+
+struct cash_response {
+	bool success;
+	int32_t focus_step;
+	int64_t exptime;
+	int32_t iso;
 };
 
 int parse_cash_xml_data(char* filepath, char* node, 

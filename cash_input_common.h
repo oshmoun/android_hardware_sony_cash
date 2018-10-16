@@ -1,10 +1,8 @@
 /*
- * Micro Communicator for Projection uC
- * a High-Speed Serial communications server
+ * CASH! Camera Augmented Sensing Helper
+ * a multi-sensor camera helper server
  *
  * Input devices module
- *
- * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,29 +19,34 @@
 
 #define ITERATE_MAX_DEVS	9
 
-enum {
+enum thread_number {
 	THREAD_TOF,
 	THREAD_RGBC,
 	THREAD_MAX
 };
 
 
-enum {
+enum fd_number {
 	FD_TOF,
 	FD_RGBC,
 	FD_MAX
 };
 
-bool ucithread_run[THREAD_MAX];
-pthread_t uci_pthreads[THREAD_MAX];
-struct pollfd uci_pfds[FD_MAX];
-struct epoll_event uci_pollevt[FD_MAX];
-int uci_pollfd[FD_MAX];
-int uci_pfdelay_ms[FD_MAX];
+struct thread_data {
+	enum thread_number thread_no;
+	void *thread_func;
+};
+
+bool cash_thread_run[THREAD_MAX];
+pthread_t cash_pthreads[THREAD_MAX];
+struct pollfd cash_pfds[FD_MAX];
+struct epoll_event cash_pollevt[FD_MAX];
+int cash_pollfd[FD_MAX];
+int cash_pfdelay_ms[FD_MAX];
 
 static const char sysfs_input_str[] = "/sys/class/input/input";
 static const char devfs_input_str[] = "/dev/input/event";
 
-int cash_input_threadman(bool start, int threadno, void *(thread_func)(void *));
+int cash_input_threadman(bool start, struct thread_data *thread_data);
 int cash_set_parameter(char* path, char* value, int value_len);
 

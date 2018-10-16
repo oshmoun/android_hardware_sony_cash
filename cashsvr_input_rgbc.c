@@ -2,8 +2,6 @@
  * CASH! Camera Augmented Sensing Helper
  * a multi-sensor camera helper server
  *
- * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -103,7 +101,7 @@ int cash_rgbc_enable(bool enable)
 			rc = cash_set_parameter(rgbc_chip_power_path, "0", 1);
 	}
 
-	if (rc < 1) {
+	if (rc) {
 		ALOGW("ERROR! Cannot %sable RGBC!", enable ? "en" : "dis");
 		goto end;
 	}
@@ -304,7 +302,7 @@ int cash_input_rgbc_thr_read(struct cash_tcs3490 *tcsvl_cur,
 int cash_rgbc_read_inst(struct cash_tcs3490 *tcsvl_final)
 {
 	/* Thread not running, we'd read nothing good here! */
-	if (!ucithread_run[THREAD_RGBC])
+	if (!cash_thread_run[THREAD_RGBC])
 		return -1;
 
 	/* Sensor is disabled, what are we trying to read?! */
@@ -323,7 +321,7 @@ int cash_rgbc_read_inst(struct cash_tcs3490 *tcsvl_final)
 	return 1;
 }
 
-static void *cash_input_rgbc_thread(void *unusedvar UNUSED)
+static void cash_input_rgbc_thread(void)
 {
 	int ret;
 	int i;
@@ -333,18 +331,18 @@ static void *cash_input_rgbc_thread(void *unusedvar UNUSED)
 
 	ALOGD("RGBC Thread started");
 
-	while (ucithread_run[THREAD_RGBC]) {
-		ret = epoll_wait(uci_pollfd[FD_RGBC], pevt,
-					10, uci_pfdelay_ms[FD_RGBC]);
+	while (cash_thread_run[THREAD_RGBC]) {
+		ret = epoll_wait(cash_pollfd[FD_RGBC], pevt,
+					10, cash_pfdelay_ms[FD_RGBC]);
 		for (i = 0; i < ret; i++) {
 			if (pevt[i].events & EPOLLERR ||
 			    pevt[i].events & EPOLLHUP ||
 			    !(pevt[i].events & EPOLLIN))
 				continue;
 
-			if (uci_pollevt[FD_RGBC].data.fd)
+			if (cash_pollevt[FD_RGBC].data.fd)
 				cash_input_rgbc_thr_read(&tcsvl_status,
-					uci_pollevt[FD_RGBC].data.fd);
+					cash_pollevt[FD_RGBC].data.fd);
 		}
 	}
 
@@ -353,14 +351,19 @@ static void *cash_input_rgbc_thread(void *unusedvar UNUSED)
 	pthread_exit((void*)((int)0));
 }
 
+struct thread_data cash_rgbc_thread_data = {
+	.thread_no = THREAD_RGBC,
+	.thread_func = cash_input_rgbc_thread
+};
+
 int cash_input_rgbc_start(bool start)
 {
-	return cash_input_threadman(start, THREAD_RGBC, cash_input_rgbc_thread);
+	return cash_input_threadman(start, &cash_rgbc_thread_data);
 }
 
 bool cash_input_is_rgbc_alive(void)
 {
-	return ucithread_run[THREAD_RGBC];
+	return cash_thread_run[THREAD_RGBC];
 }
 
 int cash_input_rgbc_init(void)
@@ -394,27 +397,27 @@ int cash_input_rgbc_init(void)
 		return -1;
 	}
 
-	uci_pollfd[FD_RGBC] = epoll_create1(0);
-	if (uci_pollfd[FD_RGBC] == -1) {
+	cash_pollfd[FD_RGBC] = epoll_create1(0);
+	if (cash_pollfd[FD_RGBC] == -1) {
 		ALOGE("Error: Cannot create epoll descriptor");
 		return -1;
 	}
 
-	uci_pfds[FD_RGBC].fd = tcsvl_fd;
-	uci_pfds[FD_RGBC].events = POLLIN;
-	uci_pfdelay_ms[FD_RGBC] = 1000;
+	cash_pfds[FD_RGBC].fd = tcsvl_fd;
+	cash_pfds[FD_RGBC].events = POLLIN;
+	cash_pfdelay_ms[FD_RGBC] = 1000;
 
-	uci_pollevt[FD_RGBC].events = POLLIN;
-	uci_pollevt[FD_RGBC].data.fd = tcsvl_fd;
+	cash_pollevt[FD_RGBC].events = POLLIN;
+	cash_pollevt[FD_RGBC].data.fd = tcsvl_fd;
 
-	rc = epoll_ctl(uci_pollfd[FD_RGBC], EPOLL_CTL_ADD,
-					tcsvl_fd, &uci_pollevt[FD_RGBC]);
+	rc = epoll_ctl(cash_pollfd[FD_RGBC], EPOLL_CTL_ADD,
+					tcsvl_fd, &cash_pollevt[FD_RGBC]);
 	if (rc) {
 		ALOGE("Cannot add epoll control");
 		return -1;
 	}
 
-	ucithread_run[THREAD_RGBC] = false;
+	cash_thread_run[THREAD_RGBC] = false;
 
 	return 0;
 }

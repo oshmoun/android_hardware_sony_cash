@@ -64,8 +64,12 @@ static bool ucthread_run = true;
 
 static int cashsvr_tof_start(int ena)
 {
-	cash_input_rgbc_start(ena);
 	return cash_input_tof_start(ena);
+}
+
+static int cashsvr_rgbc_start(int ena)
+{
+	return cash_input_rgbc_start(ena);
 }
 
 /*
@@ -106,8 +110,36 @@ int cashsvr_is_tof_in_range(void)
 	return 1;
 }
 
-int32_t cashsvr_get_focus(void) {
-	int rc, tof_score;
+/*
+ * cashsvr_is_tof_in_range - Checks if the RGBC reading is within the
+ *                           allowed range.
+ *
+ * \return Returns 0 (FALSE) for "out of range" or "error" or 1 (TRUE)
+ */
+int cashsvr_is_rgbc_in_range(void)
+{
+	int rc;
+	struct cash_tcs3490 rgbc_data;
+
+	if (cash_conf.disable_rgbc)
+		return 0;
+
+	if (!cash_input_is_rgbc_alive())
+		return 0;
+
+	rc = cash_rgbc_read_inst(&rgbc_data);
+	if (rc < 0)
+		return 0;
+
+	if (rgbc_data.clear < cash_conf.rgbc_clear_min ||
+	    rgbc_data.clear > cash_conf.rgbc_clear_max)
+		return 0;
+
+	return 1;
+}
+
+int32_t cashsvr_get_focus(struct cash_response *cash_resp) {
+	int tof_score, rc = -EINVAL;
 	int32_t focus_step;
 	struct cash_vl53l0 tof_data;
 
@@ -127,9 +159,34 @@ int32_t cashsvr_get_focus(void) {
 					cash_conf.polyreg_degree);
 
 	ALOGD("Setting focus %d for %dmm", focus_step, tof_data.range_mm);
+	cash_resp->focus_step = focus_step;
 
-	return focus_step;
+	return rc;
 }
+
+int32_t cashsvr_get_exptime_iso(struct cash_response *cash_resp) {
+	int rc;
+	struct cash_tcs3490 rgbc_data;
+	int64_t exptime = -1;
+	int32_t iso = -1;
+
+	rc = cash_rgbc_read_inst(&rgbc_data);
+	if (rc < 0)
+		return rc;
+
+	/* TODO: calculate an acceptable exptime and iso combination from RGBC reading
+	exptime = (int32_t)polyreg_f(tof_data.range_mm, focus_conf.terms,
+					cash_conf.polyreg_degree);
+	iso = (int32_t)polyreg_f(tof_data.range_mm, focus_conf.terms,
+					cash_conf.polyreg_degree);
+	*/
+	ALOGD("Setting exposure time to %ld and iso to %d for %d clear value", exptime, iso, rgbc_data.clear);
+	cash_resp->exptime = exptime;
+	cash_resp->iso = iso;
+
+	return rc;
+}
+
 
 /*
  * cash_dispatch - Recognizes the requested operation and calls
@@ -137,7 +194,7 @@ int32_t cashsvr_get_focus(void) {
  *
  * \return Returns success(0) or negative errno.
  */
-static int32_t cash_dispatch(struct cash_params *params)
+static int32_t cash_dispatch(struct cash_params *params, struct cash_response *cash_resp)
 {
 	int32_t rc;
 	int val = params->value;
@@ -145,28 +202,39 @@ static int32_t cash_dispatch(struct cash_params *params)
 	switch (params->operation) {
 	case OP_TOF_START:
 		rc = cashsvr_tof_start(val);
+		break;
 	case OP_CHECK_TOF_RANGE:
 		rc = cashsvr_is_tof_in_range();
 		break;
 	case OP_FOCUS_GET:
-		rc = cashsvr_get_focus();
+		rc = cashsvr_get_focus(cash_resp);
+		break;
+	case OP_RGBC_START:
+		rc = cashsvr_rgbc_start(val);
+		break;
+	case OP_CHECK_RGBC_RANGE:
+		rc = cashsvr_is_rgbc_in_range();
+		break;
+	case OP_EXPTIME_ISO_GET:
+		rc = cashsvr_get_exptime_iso(cash_resp);
 		break;
 	default:
 		ALOGE("Invalid operation requested.");
 		rc = -2;
 	}
 
+	cash_resp->success = rc >= 0;
 	return rc;
 }
 
 static void *cashsvr_looper(void *unusedvar UNUSED)
 {
-	int ret;
-	int32_t cash_reply = -EINVAL;
+	int ret = -EINVAL;
 	uint8_t retry;
 	socklen_t clientlen = sizeof(struct sockaddr_un);
 	struct sockaddr_un client_addr;
 	struct cash_params extparams;
+	struct cash_response cash_resp = { 0, -1, -1, -1 };
 
 reloop:
 	ALOGI("CASH Server is waiting for connection...");
@@ -188,14 +256,17 @@ reloop:
 			goto reloop;
 		} else ret = 0;
 
-		cash_reply = cash_dispatch(&extparams);
+		ret = cash_dispatch(&extparams, &cash_resp);
+		if (ret < 0) {
+			ALOGE("Dispatch returned an error!!");
+			goto reloop;
+		}
 
 retry_send:
 		retry++;
-		ret = send(clientsock, &cash_reply,
-			sizeof(cash_reply), 0);
+		ret = send(clientsock, &cash_resp,
+			sizeof(cash_resp), 0);
 		if (ret == -1) {
-			cash_reply = -EINVAL;
 			if (retry < 50)
 				goto retry_send;
 			ALOGE("ERROR: Cannot send reply!!!");
@@ -357,7 +428,6 @@ int cashsvr_configure(void)
 	if (rc < 0) {
 		ALOGE("Cannot parse configuration for ToF assisted AF");
 	} else {
-		cash_input_rgbc_init();
 		rc = cash_input_tof_init();
 		if (rc < 0)
 			ALOGW("Cannot open ToF. Ranging will be unavailable");
@@ -380,6 +450,11 @@ int cashsvr_configure(void)
         property_get("persist.cash.tof.disable", propbuf, "0");
 	if (atoi(propbuf) > 0)
 		cash_conf.disable_tof = 1;
+
+	/*
+	 * Initialize RGBC sensor
+	 */
+	cash_input_rgbc_init();
 
 	return rc;
 }

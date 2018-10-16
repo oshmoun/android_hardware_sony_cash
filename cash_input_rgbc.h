@@ -1,10 +1,8 @@
 /*
- * Micro Communicator for Projection uC
- * a High-Speed Serial communications server
+ * CASH! Camera Augmented Sensing Helper
+ * a multi-sensor camera helper server
  *
  * Input devices module
- *
- * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#define RGBC_DEFAULT_MIN_CLEAR			0
-#define RGBC_DEFAULT_MAX_CLEAR			1000
-#define RGBC_STABILIZATION_DEF_RUNS		4
-#define RGBC_STABILIZATION_WAIT_MS		10
-#define RGBC_STABILIZATION_HYST_CLEAR		30
-#define RGBC_STABILIZATION_MATCH_NO		3
 
 struct cash_tcs3490 {
 	int red;

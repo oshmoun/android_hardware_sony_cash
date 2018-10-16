@@ -1,6 +1,6 @@
 /*
- * Micro Communicator for Projection uC
- * a High-Speed Serial communications server
+ * CASH! Camera Augmented Sensing Helper
+ * a multi-sensor camera helper server
  *
  * Input devices module
  *

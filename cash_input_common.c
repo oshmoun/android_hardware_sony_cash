@@ -1,3 +1,21 @@
+/*
+ * CASH! Camera Augmented Sensing Helper
+ * a multi-sensor camera helper server
+ *
+ * Input devices module
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <sys/poll.h>
 #include <sys/epoll.h>
@@ -11,22 +29,23 @@
 
 
 /* Start/stop threads */
-int cash_input_threadman(bool start, int threadno, void *(thread_func) (void *))
+int cash_input_threadman(bool start, struct thread_data *thread_data)
 {
 	int ret = -1;
+	int thread_no = thread_data->thread_no;
 
 	if (start == false) {
-		ucithread_run[threadno] = false;
+		cash_thread_run[thread_no] = false;
 		return 0;
 	};
 
-	ucithread_run[threadno] = true;
+	cash_thread_run[thread_no] = true;
 
-	if (threadno < THREAD_MAX) {
-		ret = pthread_create(&uci_pthreads[threadno], NULL,
-				thread_func, NULL);
+	if (thread_no < THREAD_MAX) {
+		ret = pthread_create(&cash_pthreads[thread_no], NULL,
+				thread_data->thread_func, NULL);
 		if (ret != 0) {
-			ALOGE("Cannot create thread.");
+			ALOGE("Cannot create thread with number %d", thread_no);
 			return -ENXIO;
 		}
 	}

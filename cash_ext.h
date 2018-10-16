@@ -20,8 +20,8 @@
 #ifndef CASHSVR_EXT_H
 #define CASHSVR_EXT_H
 
-struct exp_iso_tpl {
-	int64_t exp;
+struct exptime_iso_tpl {
+	int64_t exptime;
 	int32_t iso;
 };
 

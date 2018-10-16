@@ -53,7 +53,7 @@
 
 static int stmvl_fd;
 
-static char *uci_tof_enable_path;
+static char *cash_tof_enable_path;
 static bool tof_enabled = false;
 
 struct cash_vl53l0 stmvl_status;
@@ -68,7 +68,7 @@ int cash_tof_enable(bool enable)
 {
 	int fd, rc;
 
-	if (uci_tof_enable_path == NULL)
+	if (cash_tof_enable_path == NULL)
 		return -1;
 
 	/* Reset the readings to start fresh */
@@ -76,9 +76,9 @@ int cash_tof_enable(bool enable)
 	stmvl_status.range_mm = -1;
 	stmvl_status.range_status = -1;
 
-	fd = open(uci_tof_enable_path, O_WRONLY | O_SYNC);
+	fd = open(cash_tof_enable_path, O_WRONLY | O_SYNC);
 	if (fd < 0) {
-		ALOGD("Cannot open %s", uci_tof_enable_path);
+		ALOGD("Cannot open %s", cash_tof_enable_path);
 		return 1;
 	}
 
@@ -110,8 +110,8 @@ static int cash_tof_sys_init(bool high_accuracy, int devno, int plen)
 	uid_t uid;
 	gid_t gid;
 
-	uci_tof_enable_path = (char*)calloc(plen + LEN_ENAB, sizeof(char));
-	if (uci_tof_enable_path == NULL) {
+	cash_tof_enable_path = (char*)calloc(plen + LEN_ENAB, sizeof(char));
+	if (cash_tof_enable_path == NULL) {
 		ALOGE("Memory exhausted. Cannot allocate.");
 		return -3;
 	}
@@ -132,11 +132,11 @@ static int cash_tof_sys_init(bool high_accuracy, int devno, int plen)
 
 	gid = grp->pw_gid;
 
-	snprintf(uci_tof_enable_path, plen + LEN_ENAB,
+	snprintf(cash_tof_enable_path, plen + LEN_ENAB,
 			"%s%d/enable_ps_sensor", sysfs_input_str, devno);
 
-	if (chown(uci_tof_enable_path, uid, gid) == -1) {
-		ALOGD("Cannot chown %s", uci_tof_enable_path);
+	if (chown(cash_tof_enable_path, uid, gid) == -1) {
+		ALOGD("Cannot chown %s", cash_tof_enable_path);
 		return 1;
 	}
 
@@ -144,7 +144,7 @@ static int cash_tof_sys_init(bool high_accuracy, int devno, int plen)
 		sns_mode_path = (char*)calloc(plen + LEN_MODE, sizeof(char));
 		if (sns_mode_path == NULL) {
 			ALOGE("Memory exhausted. Cannot allocate.");
-			free(uci_tof_enable_path);
+			free(cash_tof_enable_path);
 			return -3;
 		}
 
@@ -388,7 +388,7 @@ static inline bool cash_tof_is_val_ok(int d1, int d2, int hysteresis)
 int cash_tof_read_inst(struct cash_vl53l0 *stmvl_final)
 {
 	/* Thread not running, we'd read nothing good here! */
-	if (!ucithread_run[THREAD_TOF])
+	if (!cash_thread_run[THREAD_TOF])
 		return -1;
 
 	/* Sensor is disabled, what are we trying to read?! */
@@ -428,7 +428,7 @@ int cash_tof_thr_read_stabilized(
 	int retry = 0, cur_dst, range, score, i;
 
 	/* Thread not running, we'd read nothing good here! */
-	if (!ucithread_run[THREAD_TOF])
+	if (!cash_thread_run[THREAD_TOF])
 		return -1;
 
 	/* Sensor is disabled, what are we trying to read?! */
@@ -522,7 +522,7 @@ again:
 	return score;
 }
 
-static void *cash_input_tof_thread(void *unusedvar UNUSED)
+static void cash_input_tof_thread(void)
 {
 	int ret;
 	int i;
@@ -530,20 +530,20 @@ static void *cash_input_tof_thread(void *unusedvar UNUSED)
 
 	cash_tof_enable(true);
 
-	ALOGD("ToF Thread started %d %d", ucithread_run[THREAD_TOF], ucithread_run[THREAD_RGBC]);
+	ALOGD("ToF Thread started");
 
-	while (ucithread_run[THREAD_TOF]) {
-		ret = epoll_wait(uci_pollfd[FD_TOF], pevt,
-					10, uci_pfdelay_ms[FD_TOF]);
+	while (cash_thread_run[THREAD_TOF]) {
+		ret = epoll_wait(cash_pollfd[FD_TOF], pevt,
+					10, cash_pfdelay_ms[FD_TOF]);
 		for (i = 0; i < ret; i++) {
 			if (pevt[i].events & EPOLLERR ||
 			    pevt[i].events & EPOLLHUP ||
 			    !(pevt[i].events & EPOLLIN))
 				continue;
 
-			if (uci_pollevt[FD_TOF].data.fd)
+			if (cash_pollevt[FD_TOF].data.fd)
 				cash_input_tof_thr_read(&stmvl_status,
-					uci_pollevt[FD_TOF].data.fd);
+					cash_pollevt[FD_TOF].data.fd);
 		}
 	}
 
@@ -552,14 +552,19 @@ static void *cash_input_tof_thread(void *unusedvar UNUSED)
 	pthread_exit((void*)((int)0));
 }
 
+struct thread_data cash_tof_thread_data = {
+	.thread_no = THREAD_TOF,
+	.thread_func = cash_input_tof_thread
+};
+
 int cash_input_tof_start(bool start)
 {
-	return cash_input_threadman(start, THREAD_TOF, cash_input_tof_thread);
+	return cash_input_threadman(start, &cash_tof_thread_data);
 }
 
 bool cash_input_is_tof_alive(void)
 {
-	return ucithread_run[THREAD_TOF];
+	return cash_thread_run[THREAD_TOF];
 }
 
 int cash_input_tof_init(void)
@@ -593,27 +598,27 @@ int cash_input_tof_init(void)
 		return -1;
 	}
 
-	uci_pollfd[FD_TOF] = epoll_create1(0);
-	if (uci_pollfd[FD_TOF] == -1) {
+	cash_pollfd[FD_TOF] = epoll_create1(0);
+	if (cash_pollfd[FD_TOF] == -1) {
 		ALOGE("Error: Cannot create epoll descriptor");
 		return -1;
 	}
 
-	uci_pfds[FD_TOF].fd = stmvl_fd;
-	uci_pfds[FD_TOF].events = POLLIN;
-	uci_pfdelay_ms[FD_TOF] = 1000;
+	cash_pfds[FD_TOF].fd = stmvl_fd;
+	cash_pfds[FD_TOF].events = POLLIN;
+	cash_pfdelay_ms[FD_TOF] = 1000;
 
-	uci_pollevt[FD_TOF].events = POLLIN; // | EPOLLET;
-	uci_pollevt[FD_TOF].data.fd = stmvl_fd;
+	cash_pollevt[FD_TOF].events = POLLIN; // | EPOLLET;
+	cash_pollevt[FD_TOF].data.fd = stmvl_fd;
 
-	rc = epoll_ctl(uci_pollfd[FD_TOF], EPOLL_CTL_ADD,
-					stmvl_fd, &uci_pollevt[FD_TOF]);
+	rc = epoll_ctl(cash_pollfd[FD_TOF], EPOLL_CTL_ADD,
+					stmvl_fd, &cash_pollevt[FD_TOF]);
 	if (rc) {
 		ALOGE("Cannot add epoll control");
 		return -1;
 	}
 
-	ucithread_run[THREAD_TOF] = false;
+	cash_thread_run[THREAD_TOF] = false;
 /*
 	rc = cash_input_threadman(true, THREAD_TOF);
 	if (rc < 0)
