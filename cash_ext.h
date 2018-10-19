@@ -31,6 +31,6 @@ int32_t cash_get_focus(void);
 
 int cash_rgbc_start(int value);
 int cash_is_rgbc_in_range(void);
-struct exp_iso_tpl cash_get_exp_iso_tpl(void);
+struct exptime_iso_tpl cash_get_exptime_iso(void);
 
 #endif
